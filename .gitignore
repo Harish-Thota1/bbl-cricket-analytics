@@ -1,0 +1,15 @@
+# data - not ours to redistribute
+data/
+people.csv
+bowler_meta_all.csv
+cricinfo_ids.txt
+
+# environment
+venv/
+.env
+__pycache__/
+.ipynb_checkpoints/
+
+# local files
+.DS_Store
+*.pbix
