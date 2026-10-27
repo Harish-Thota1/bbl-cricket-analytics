@@ -13,3 +13,7 @@ __pycache__/
 # local files
 .DS_Store
 *.pbix
+out/
+.venv/
+*.parquet
+db.env
