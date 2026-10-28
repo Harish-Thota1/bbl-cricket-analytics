@@ -1,10 +1,12 @@
 # BBL opposition scouting dashboard
 
-**Chris Lynn cannot play the ball that turns away from him.** Leg spin and left-arm
-orthodox hold him 27% below his normal scoring rate. Off spin, also spin but turning the
-other way, he hits harder than pace.
+**Leg spin and left-arm orthodox hold Chris Lynn about 27% below his normal scoring
+rate**, across 751 balls. Off spin, also spin but turning the other way, he scores off
+faster than his normal. Whether the direction of turn is the cause is still a hypothesis:
+left-arm wrist spin also turns into him, and it slows him too.
 
-That took 153,250 deliveries to find. This is the dashboard that surfaced it.
+That came out of 153,250 deliveries. This is the dashboard that surfaced it, and its
+numbers are checked against published records, down to individual innings.
 
 ![Batter plan](screenshots/page1_batter_plan.png)
 
@@ -42,8 +44,8 @@ giving every player a permanent ID that links through to ESPNCricinfo.
 
 ### What it does not contain
 
-**No player attributes.** No bowling style, no batting hand, no team membership. Verified
-by reading a complete info file.
+**No player attributes.** No bowling style and no batting hand. Verified by reading a
+complete info file.
 
 That gap mattered. Knowing a batter struggles against *one bowler* only helps if you have
 that bowler. Knowing he struggles against *leg spin* works against anyone. Filling it is
@@ -121,26 +123,28 @@ hundred summarised rows instead of 153,250.
 
 ## Main finding: Chris Lynn
 
-### Turn direction, not spin versus pace
+### Not simply spin versus pace
 
-| Bowling type | Ratio | Balls | Wickets |
+| Bowling type | Ratio | Balls faced | Wickets |
 |---|---|---|---|
-| Leg spin | **0.73** | 434 | 21 |
-| Left-arm orthodox | **0.73** | 328 | 8 |
-| Left-arm wrist spin | 0.82 | 124 | 5 |
-| Left-arm pace | 0.97 | 340 | 12 |
-| Right-arm pace | **1.15** | 1,404 | 55 |
-| Off spin | **1.17** | 182 | 12 |
+| Leg spin | **0.72** | 429 | 21 |
+| Left-arm orthodox | **0.73** | 322 | 8 |
+| Left-arm wrist spin | 0.82 | 121 | 5 |
+| Left-arm pace | 0.98 | 329 | 12 |
+| Off spin | **1.14** | 181 | 12 |
+| Right-arm pace | **1.16** | 1,353 | 55 |
 
-The obvious reading is *"he struggles against spin."* But **off spin is his best type**,
-17% above his normal rate. All three of the extreme entries are spin.
+The obvious reading is *"he struggles against spin."* But off spin is one of his two
+best types, 14% above his normal rate, and it is spin too.
 
-**The difference is which way the ball turns.** Lynn is right-handed. Leg spin and
+**One possible explanation is the direction of turn.** Lynn is right-handed. Leg spin and
 left-arm orthodox turn *away* from him. Off spin turns *into* him.
 
-**No model would have labelled that.** It needed someone to notice that two of six
-categories share a physical property. And it is directly actionable: bowl anything that
-turns away from him.
+**It does not fully fit.** Left-arm wrist spin also turns into a right-hander, and it
+slows him as well (0.82, on a moderate 121 balls). And none of these figures is adjusted
+for phase: pace and spin bowl in different parts of the innings, where scoring rates
+differ. So turn direction is a hypothesis to test next, not a proven weakness. The safe
+use today is narrow: against Lynn, prefer leg spin or left-arm orthodox to off spin.
 
 ---
 
@@ -154,20 +158,20 @@ bowling? You cannot tell. It depends how fast that batter normally scores.
 ```
 sr_ratio  =  strike rate against this bowler  ÷  his own career strike rate
 
-strike rate  =  ( runs ÷ balls faced ) × 100
+strike rate  =  ( runs off the bat ÷ balls faced ) × 100      a wide is not a ball faced
 ```
 
 **Worked example: Lynn against Adam Zampa**
 
 | Step | Calculation | Result |
 |---|---|---|
-| Career record | 4,088 runs off 2,812 balls | |
-| Career strike rate | (4,088 ÷ 2,812) × 100 | **145.4** |
-| Against Zampa | 104 runs off 98 balls | |
-| Strike rate vs Zampa | (104 ÷ 98) × 100 | **106.0** |
-| **Ratio** | **106.0 ÷ 145.4** | **0.73** |
+| Career record | 4,088 runs off 2,735 balls faced | |
+| Career strike rate | (4,088 ÷ 2,735) × 100 | **149.5** |
+| Against Zampa | 90 runs off 98 balls | |
+| Strike rate vs Zampa | (90 ÷ 98) × 100 | **91.8** |
+| **Ratio** | **91.8 ÷ 149.5** | **0.61** |
 
-**Lynn scores 27% slower against Zampa than he does normally.**
+**Lynn scores 39% slower against Zampa than he does normally.**
 
 | Value | Meaning |
 |---|---|
@@ -203,8 +207,8 @@ the evidence: one pairing is 30 to 90 balls, a bowling type is 400 or more.
 
 ### 3 · Death bowling
 
-Economy in overs 16 to 20, with dot-ball percentage. Who to trust when the game is on the
-line.
+Official economy (runs charged to the bowler per six legal balls) in overs 16 to 20, with
+dot-ball percentage. Who to trust when the game is on the line.
 
 ![Death bowling](screenshots/page3_death_bowling.png)
 
@@ -212,7 +216,7 @@ line.
 
 ## Validation
 
-**43 checks, all passing.** The pipeline halts if any fails, so bad data cannot reach the
+**53 checks, all passing.** The pipeline halts if any fails, so bad data cannot reach the
 dashboard.
 
 - **Completeness.** Row counts match between stages, all 662 matches survive, no duplicates
@@ -220,7 +224,9 @@ dashboard.
 - **Join safety.** No player name maps to two IDs, which would silently duplicate rows
 - **Validity.** Runs per ball between 0 and 6, no nulls in key fields, no team playing itself
 - **Domain reality.** About 240 balls per match, exactly 8 BBL teams, pace-dominated bowling mix
-- **External.** Chris Lynn's strike rate computes to 145.4, matching his published record
+- **External.** Published records, matched: Lynn's career strike rate (149.5 against
+  149.21), Maxwell's 154\* and Stoinis's 147\* ball for ball, and Rashid Khan's and Peter
+  Siddle's career bowling figures exactly
 
 ### Why the last two groups exist
 
@@ -239,6 +245,22 @@ Raw and fact tables agreed at 306,500 rows each. They agreed because both were w
 Comparing one stage of a pipeline to another **cannot catch an error present at every
 stage**. Every stage now carries a check against the outside world as well.
 
+### What a second review found
+
+After publishing, a line-by-line review against the official scoring rules found four
+errors that every check had passed. The external check accepted any Lynn strike rate from
+138 to 152: wide enough to hide a 3.8-point error.
+
+| Error | Effect | Fix | Proof now |
+|---|---|---|---|
+| Wides counted as balls faced | Lynn's strike rate 145.4 against a published 149.21; 40 matchups passed the 30-ball minimum without 30 real balls | `ball_faced` column | Maxwell 154\* off 64 and Stoinis 147\* off 79 match ball for ball |
+| A death bowler's team taken from the side that bowled first | 41% of death-over balls credited to the wrong team; the Strikers' best death bowler shown as Neser, really Rashid Khan | team read from each ball | every bowler's full record under his own side |
+| Economy counted byes and leg byes, and counted wides and no-balls as balls | bowlers who bowl wides looked cheaper (Overton 7.95, really 8.54) | official formula: runs charged ÷ legal balls | Rashid Khan and Peter Siddle match their published careers exactly |
+| Overs 1-6 labelled "Powerplay" | wrong since BBL\|10, when the powerplay became 4 overs plus a Power Surge | phases named by overs | no numbers change |
+
+The headline survived: leg spin and left-arm orthodox still hold Lynn about 27% below his
+normal. One claim did not: off spin is no longer his single best type.
+
 Full validation approach in [`METHODOLOGY.md`](METHODOLOGY.md), including how each check
 was chosen and the two that had to be tuned after they fired on legitimate cricket.
 
@@ -246,17 +268,18 @@ was chosen and the two that had to be tuned after they fired on legitimate crick
 
 ## Limitations
 
-**Phase, tested rather than assumed.** A bowler used mainly in the powerplay looks more
-suppressive regardless of skill. The obvious fix is to compare each matchup against the
+**Phase, tested rather than assumed.** A bowler used mainly in overs 1-6 looks more
+suppressive regardless of skill, because batters score slowest then (120.5 per 100 balls,
+against 124.7 in overs 7-15 and 149.7 in overs 16-20). The obvious fix is to compare each matchup against the
 batter's baseline for that phase. Measured:
 
 | Phase | Matchups surviving | Batters |
 |---|---|---|
-| Middle | 109 | 40 |
-| Powerplay | 73 | 29 |
-| **Death** | **6** | **5** |
+| Overs 7-15 | 103 | 40 |
+| Overs 1-6 | 62 | 25 |
+| **Overs 16-20** | **5** | **4** |
 
-> **188 matchups instead of 620, so the confound is named, not fixed.**
+> **170 matchups instead of 580, so the confound is named, not fixed.**
 
 The correction exists, it was tried, and the data lacks the depth for it. **These are
 associations, not causes.**
@@ -269,6 +292,10 @@ threshold a pairing is indicative, not conclusive. No significance testing appli
 **Coverage.** Only batters with 500+ career balls get a baseline, so the analysis describes
 established players and says nothing about emerging or lower-order ones.
 
+**Missing matches.** Cricsheet does not hold every BBL match. Career runs come out short
+of published totals: Maxwell by 121, Lynn by 45, Stoinis by 32. Ratios shift only if the
+missing innings differ from the rest.
+
 Full list in [`METHODOLOGY.md`](METHODOLOGY.md) §9, alongside what a project like this
 cannot replicate.
 
@@ -278,7 +305,7 @@ cannot replicate.
 
 | File | |
 |---|---|
-| [`bbl_scouting_pipeline_final.ipynb`](bbl_scouting_pipeline_final.ipynb) | the pipeline, with outputs, 43 checks all passing |
+| [`bbl_scouting_pipeline_final.ipynb`](bbl_scouting_pipeline_final.ipynb) | the pipeline, with outputs, 53 checks all passing |
 | [`METHODOLOGY.md`](METHODOLOGY.md) | every decision and why, setup instructions, full limitations |
 | `bbl_dark_theme.json` | the Power BI theme |
 | `fetch_styles.R` | fetches bowling styles, generated by the notebook |
@@ -294,12 +321,18 @@ setup and the R step.
 
 ## Next
 
-**Women's Big Bash.** The pipeline is competition-agnostic. WBBL uses the identical
-Cricsheet format, so pointing the loader at it is a data swap rather than a rebuild. That
-reusability was the design goal.
+**Women's Big Bash.** WBBL uses the identical Cricsheet format. The expected counts and
+venue merges are written for the men's data today, so they move into a per-competition
+settings block first; then the same pipeline runs on WBBL.
 
-**Significance testing** on the matchup ratios, so a 0.73 over 434 balls can be
-distinguished from a 0.73 over 60.
+**Test the turn-direction idea** by comparing Lynn against each bowling type within the
+same overs. At type level the samples are big enough for that.
+
+**Power Surge.** Cricsheet's JSON files record when each side took its surge, so the real
+powerplay overs can be marked and the surge itself analysed.
+
+**Significance testing** on the matchup ratios, so a 0.72 over 429 balls can be
+distinguished from a 0.72 over 60.
 
 ---
 
