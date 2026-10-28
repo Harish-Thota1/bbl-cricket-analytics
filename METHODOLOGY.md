@@ -27,7 +27,7 @@ Section numbers match the notebook; comments there marked `§n` point here.
 | [§2 Venues](#2--venues) | 32 names to 21 grounds · the two sponsor renames and their sources |
 | [§3 Match columns](#3--why-the-match-columns-are-not-home-and-away) | why "batting first" and not "home", measured across 662 matches |
 | [§4 Player identity](#4--player-identity) | registry IDs · the Green and Brown cases · the join-safety check |
-| [§5 The fact table](#5--the-fact-table) | `bowler_wicket` · `phase` · the external check against a published record |
+| [§5 The fact table](#5--the-fact-table) | balls faced and legal balls · `bowler_wicket` · `phase` · checks against published records |
 | [§6 Bowling styles](#6--bowling-styles) | routes considered · why the pipeline is two commands · grouping decisions |
 | [§7 The serving views](#7--the-serving-views) | why 30 balls · the three ratios · coverage · the turn-direction finding |
 | [§8 Power BI](#8--power-bi) | connection · relationships · the one-active-relationship trap |
@@ -53,11 +53,11 @@ pick a batter, see which bowlers hold him back and which he scores freely agains
 A batter scoring 104 runs per 100 balls against a bowler tells you nothing on its own. Is
 that good bowling, or a slow batter?
 
-Aaron Finch's career rate is 126. So 104 against one bowler means that bowler slows him by
+Aaron Finch's career rate is 131. So 104 against one bowler means that bowler slows him by
 about a fifth. A batter whose normal rate *is* 104 shows no effect at all.
 
 Every figure is therefore a **ratio**: his rate against one bowler, divided by his own
-career rate. Finch against a bowler who holds him to 104 gives 104 ÷ 126 = 0.82.
+career rate. Finch against a bowler who holds him to 104 gives 104 ÷ 131 = 0.79.
 
 | Ratio | Meaning |
 |---|---|
@@ -84,7 +84,7 @@ check.
 An early version of this pipeline loaded every ball twice. The relative check passed
 happily: both stages agreed at 306,500 rows, because both were doubled. What caught it was
 cricket knowledge. Every stage now carries at least one absolute check; the strongest is
-§5b, which compares a computed figure to a published statistic.
+§5b, which compares computed figures to published records.
 
 ---
 
@@ -296,6 +296,28 @@ name, that name needs resolving by hand before the pipeline continues.
 One row per delivery. Every column is either a **link** to a dimension or a **fact** about
 that ball.
 
+### Balls faced and legal balls
+
+One delivery can count differently for the batter and for the bowler. Official scoring:
+
+| Delivery | Ball faced (batter) | Legal ball (bowler) | Runs charged to the bowler |
+|---|---|---|---|
+| Normal ball | yes | yes | runs off the bat |
+| Wide | no | no | the wide runs |
+| No-ball | yes | no | the no-ball run, plus anything off the bat |
+| Bye or leg bye | yes | yes | none |
+
+Three generated columns hold these rules in one place: `ball_faced`, `legal_ball` and
+`bowler_runs`. Every batting figure divides by `SUM(ball_faced)`; every bowling figure uses
+`SUM(legal_ball)` and `SUM(bowler_runs)`.
+
+Wide and no-ball rows are kept, not filtered out, because a batter can be stumped off a
+wide: 11 such dismissals in this data would otherwise disappear.
+
+These rules came from a second review. The first version counted every delivery as a ball
+for both players, which put Lynn's strike rate 3.8 below his published figure and let 40
+matchups pass the 30-ball minimum without 30 real balls.
+
 ### `bowler_wicket`
 
 True only when the bowler earned the dismissal. Run-outs, retirements and obstruction are
@@ -304,23 +326,45 @@ would overstate every bowler's record, and a cricket person would spot it immedi
 
 ### `phase`
 
-| Phase | Overs | Character |
-|---|---|---|
-| Powerplay | 0–5 | fielding restrictions, batters attack |
-| Middle | 6–14 | fields spread, scoring slows |
-| Death | 15–19 | all-out hitting |
+| Phase | Overs in the data | Character | Batting strike rate |
+|---|---|---|---|
+| Overs 1-6 | 0-5 | fielding restrictions: all six overs until BBL\|09, the first four since | 120.5 |
+| Overs 7-15 | 6-14 | fields spread | 124.7 |
+| Overs 16-20 | 15-19 | the death overs, all-out hitting | 149.7 |
+
+Named by overs, not "Powerplay". Since BBL|10 (2020-21) the powerplay is overs 1-4 plus a
+two-over Power Surge the batting side takes from the 11th over, so "Powerplay" would be
+wrong for six of the fifteen seasons. The CSV files do not record when the surge was
+taken, so its overs cannot be marked yet.
 
 Computed once rather than recalculated in every query.
 
-### §5b · The external check
+### §5b · The external checks
 
-Chris Lynn's BBL strike rate is publicly ~145. If the pipeline computes 145, the whole
-chain works.
+Computed figures are compared to published records:
+
+| Check | Published | Computed | Tolerance |
+|---|---|---|---|
+| Lynn career strike rate | 149.21 | 149.47 | 148.2 to 150.2 |
+| Lynn career balls faced | 2,770 | 2,735 | 2,700 to 2,800 |
+| Maxwell 154\* | 64 balls | 64 | exact |
+| Stoinis 147\* | 79 balls | 79 | exact |
+| Rashid Khan career (§7d) | 1,598 balls, 1,716 runs, 98 wickets | same | exact |
+| Peter Siddle career (§7d) | 2,675 runs, 127 wickets | same | exact |
 
 **The ball count is checked too, and that is the point.** A doubled dataset would still
-show 145, because runs and balls both double and the ratio cancels. Only the career ball
-count gives it away, since twice a career is implausible. Checking both together catches
-what neither catches alone, and that is exactly the error that got through the first time.
+show the same strike rate, because runs and balls both double and the ratio cancels. Only
+the career ball count gives it away, since twice a career is implausible. Checking both
+together catches what neither catches alone, and that is exactly the error that got
+through the first time.
+
+**Why Lynn uses a range.** Cricsheet is missing a few of his innings, so the data falls
+about 35 balls short of his published total. The two innings and the two bowling careers
+are complete in the data, so those must match exactly.
+
+**Why the tolerance was tightened.** The first version accepted 138 to 152, and the
+pipeline computed 145.4 against a published 149.21. A range that wide hid the wides error
+described in §5.
 
 ---
 
@@ -407,8 +451,8 @@ that batter's ordinary rate. Stage 3 is where a number becomes a finding.
 
 | Threshold | Pairings | Batters |
 |---|---|---|
-| 60 balls | 37 | 16, too few to build anything |
-| **30 balls** | **620** | **73** |
+| 60 balls faced | 35 | 15, too few to build anything |
+| **30 balls faced** | **580** | **72** |
 
 Thirty balls is about five overs of head-to-head. A stated trade-off: enough for a pattern
 to be worth noticing, not enough for certainty. Over 10 balls a batter might score 4 runs
@@ -427,7 +471,7 @@ error a domain expert spots in ten seconds.
 three balls tends to take a risk on the fourth.
 
 **`boundary_ratio`** is his share of fours and sixes ÷ his usual share. Lynn hits a boundary
-off roughly 22% of balls faced; if that drops to 15% against one bowler, the ratio is 0.68, meaning that bowler is denying him the big shots even while he still finds singles.
+off roughly 21% of balls faced; if that drops to 15% against one bowler, the ratio is 0.71, meaning that bowler is denying him the big shots even while he still finds singles.
 
 Containment happens two ways. One bowler starves a batter of singles; another lets him
 rotate but denies boundaries. Different field settings, and `sr_ratio` alone cannot tell
@@ -450,36 +494,47 @@ lower-order players, a genuine gap in a talent-pathway context.
 
 Page 1 tells a coach to bowl one particular bowler at one particular batter. That only
 helps if you have that bowler. This view groups bowlers by type, so the answer works
-against any opponent, but and multiplies the evidence from 30–90 balls to 400+.
+against any opponent, and multiplies the evidence from 30–90 balls to 400+.
 
 `sample_confidence` marks each row *solid* (200+ balls), *moderate* (100–199) or *thin*
 (under 100). The dashboard fades the thin ones, because on screen a row built on 80 balls
 looks just as trustworthy as one built on 400.
 
 **The Lynn result is worth reading carefully.** The obvious conclusion is "he struggles
-against spin". That But off spin is his best type while leg spin is his worst, and both are
-spin. The pattern is **which way the ball turns**: leg spin and left-arm orthodox both turn
-away from a right-hander; off spin turns into him.
+against spin". But off spin is one of his two best types (1.14) while leg spin is his
+worst (0.72), and both are spin. One possible pattern is **which way the ball turns**: leg
+spin and left-arm orthodox both turn away from a right-hander; off spin turns into him.
 
-That is a cricket insight, not a statistical one. No model would have labelled it, because
-it needs someone to notice that two of six categories share a physical property.
+It does not fully fit. Left-arm wrist spin also turns into a right-hander and still slows
+him (0.82, 121 balls), and the figures are not adjusted for phase. So it is a hypothesis
+for the next test, not a finding to act on broadly.
 
 ### §7d · `v_death_bowling`, page 3
 
 A different question: not "who do we bowl at this batter" but "who bowls the 19th over".
 The last five overs decide T20 matches, and the call is made in seconds.
 
-**Economy** is runs per over, extras included, because a wide costs the bowling side a run
-regardless of who bowled it.
+**Economy** is the official figure: runs charged to the bowler per six legal balls. Runs
+off the bat, wides and no-balls count against him; byes and leg byes do not, because they
+are not his fault. Wides and no-balls are bowled again, so they are not balls. Checked
+exactly against Rashid Khan's and Peter Siddle's published careers.
 
-**Dot ball percentage** is the share of deliveries conceding nothing. Dots create the
-wicket even when the dot-baller is not the one who takes it.
+**Dot ball percentage** is the share of legal balls where the bowler gave away nothing, so
+a leg bye counts as a dot for him. Dots create the wicket even when the dot-baller is not
+the one who takes it.
 
-⚠️ **`team_ref` is a rough guess at each bowler's team.** The data never says which club a
-player belongs to, so the team is taken from whichever side bowled first in his matches.
-That works most of the time, but a player who moved clubs will appear twice, once under
-each. Use it to narrow a long list down to roughly one squad, not to answer "who plays for
-the Strikers".
+**`team`** is the side the bowler was bowling for, read from each ball. A bowler who
+changed clubs appears once for each club.
+
+An earlier version took the team from whichever side bowled *first* in the match. That is
+right only for the first innings: 41% of death-over balls were credited to the wrong team,
+and each bowler's record was split across sides. On the Strikers page, Neser showed as the
+best death bowler (7.98 on 115 balls). With all his overs counted he is 11th of 16 (9.54
+on 227 legal balls), and Rashid Khan is first (7.78 on 306).
+
+The economy formula was also corrected. The first version counted byes and leg byes
+against the bowler and counted wides and no-balls as balls, which flattered bowlers who
+bowl wides: Overton, with 12 death-over wides, showed 7.95 against an official 8.54.
 
 ---
 
@@ -500,7 +555,7 @@ summarised.
 `v_scouting[batter]` so one batter selection drives pages 1 and 2. Page 3 is bowler-level
 and stays independent.
 
-**Sync slicers** across pages 1 and 2 only. Page 3 uses a team slicer.
+**Sync slicers** across pages 1 and 2 only. Page 3 uses a slicer on `team`.
 
 **The relationship trap.** Power BI allows only one *active* relationship between two
 tables. Import `dim_player` and link it to both `batter_id` and `bowler_id`, and one
@@ -514,11 +569,16 @@ meaningless for a ratio and produces a nonsense total row.
 below 1.00 and red above. Use a neutral bar and let conditionally-coloured text carry the
 direction.
 
-**Footer on every page.** The wording matters as much as the numbers:
+**Footer on pages 1 and 2.** The wording matters as much as the numbers:
 
 > Ratio = strike rate against this bowler ÷ the batter's career strike rate. Under 1.00
-> means he scores slower than his own normal. 30+ ball matchups only; dimmed rows are thin
+> means he scores slower than his own normal. 30+ balls faced only; dimmed rows are thin
 > samples. Not controlled for phase or venue.
+
+**Footer on page 3:**
+
+> Economy = runs charged to the bowler per six legal balls. Overs 16 to 20, 60+ legal
+> balls. Team = the side he was bowling for.
 
 ---
 
@@ -528,20 +588,21 @@ A finding without its limits is not a finding.
 
 ### Phase, tested rather than assumed
 
-A bowler used mainly in the powerplay looks more suppressive regardless of skill, because
-scoring is naturally slower then. The obvious correction is to compare each matchup against
+A bowler used mainly in overs 1-6 looks more suppressive regardless of skill, because
+scoring is naturally slower then (120.5 per 100 balls, against 124.7 in overs 7-15 and
+149.7 in overs 16-20). The obvious correction is to compare each matchup against
 the batter's baseline *for that phase*.
 
 That was measured. At the 30-ball threshold it leaves:
 
 | Phase | Matchups | Batters |
 |---|---|---|
-| Middle | 109 | 40 |
-| Powerplay | 73 | 29 |
-| **Death** | **6** | **5** |
+| Overs 7-15 | 103 | 40 |
+| Overs 1-6 | 62 | 25 |
+| **Overs 16-20** | **5** | **4** |
 
-**188 matchups instead of 620**, and effectively nothing in the death overs, the phase
-that decides T20 matches. T20 head-to-head samples cannot support the split.
+**170 matchups instead of 580**, and effectively nothing in overs 16-20, the phase that
+decides T20 matches. T20 head-to-head samples cannot support the split.
 
 The confound is therefore **acknowledged rather than corrected**, which is the honest
 position: the correction exists, it was tried, and the data does not have the depth for it.
@@ -568,9 +629,16 @@ to ESPNCricinfo, but not independently audited across all players.
 **One known artefact remains.** Match 571256, ball 4.1: an identical wide recorded twice.
 One row in 153,250, documented rather than deleted.
 
-**This is men's BBL.** The pipeline is competition-agnostic. The Women's Big Bash uses the
-identical Cricsheet format, so pointing the loader at it is a data swap rather than a
-rebuild. That reusability is the design goal.
+**Missing matches.** Cricsheet does not hold every BBL match. Career runs come out short
+of published totals: Maxwell by 121, Lynn by 45, Stoinis by 32. Ratios shift only if the
+missing innings differ from the rest.
+
+**Power Surge overs are not marked.** The CSV files do not record when each side took its
+surge. Cricsheet's JSON files do, which is the route to marking them.
+
+**This is men's BBL.** The Women's Big Bash uses the identical Cricsheet format, but the
+expected counts and venue merges are written for the men's data. They move into a
+per-competition settings block before the pipeline runs on WBBL.
 
 ---
 
@@ -582,7 +650,7 @@ Four approaches assessed and set aside, with reasons:
 |---|---|
 | **Scraping ESPNCricinfo for bowling styles** | Returns 403 to scripted requests. Getting past it means impersonating a browser at the TLS level, circumventing a control the site put there deliberately. |
 | **Wikipedia API for bowling styles** | Permitted and functional, but requires each player's full name. Finding the full name means opening the profile, at which point the style is already visible. No time saved. |
-| **Phase-adjusted baselines** | Removes a real confound, but drops 620 matchups to 188 and leaves 6 in the death overs. The correction costs more than it buys. |
+| **Phase-adjusted baselines** | Removes a real confound, but drops 580 matchups to 170 and leaves 5 in overs 16-20. The correction costs more than it buys. |
 | **Manual style mapping for the top 20 bowlers** | Would have covered ~28% of deliveries. Superseded by the R package, which covered all 372 bowlers with no manual work. |
 
 Each was tested rather than dismissed. The phase result in particular is reported in §9
